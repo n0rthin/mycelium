@@ -5,15 +5,34 @@ import uvicorn
 import threading
 import time
 
-class Message(BaseModel):
-    to: str
-    sender: str
+class Address():
+    url: str
+    name: str
+
+    def __init__(self, url: str = None, name: str = None):
+        self.url = url
+        self.name = name
+
+    def to_dict(self):
+        return {
+            "url": self.url,
+            "name": self.name
+        }
+    
+    
+class AddressSchema(BaseModel):
+    url: str
+    name: str
+
+class TransportMessage(BaseModel):
+    to: AddressSchema
+    sender: AddressSchema
     date: float
     procedure: str
     payload: dict
 
-class Transport():
-    def __init__(self, address):
+class HTTPTransport():
+    def __init__(self, address: Address):
         self.address = address
 
     def set_service(self, service):
@@ -21,8 +40,9 @@ class Transport():
         self.app = FastAPI()
 
         @self.app.post("/")
-        async def process(msg: Message):
-            print("incomming message", msg)
+        async def process(msg: TransportMessage):
+            msg.to = Address(msg.to.url, msg.to.name)
+            msg.sender = Address(msg.sender.url, msg.sender.name)
             procedure = getattr(self.service, msg.procedure, None)
 
             if not callable(procedure):
@@ -39,14 +59,13 @@ class Transport():
 
         threading.Thread(target=run).start()
 
-    def send_message(self, to, procedure, payload):
-        print("sending message", to, procedure, payload)
-        requests.post(to, json={
-            "to": to,
-            "sender": self.address,
+    def send_message(self, to: Address, procedure: str, payload: dict):
+        print("sending message", to.url, procedure, payload)
+        requests.post(to.url, json={
+            "to": to.to_dict(),
+            "sender": self.address.to_dict(),
             "date": time.time(),
             "procedure": procedure,
             "payload": payload
         })
-    
     
