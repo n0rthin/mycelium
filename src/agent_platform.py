@@ -1,4 +1,6 @@
 from typing import Optional 
+from src.transport import Transport, Address
+from src.agent import Agent
 
 class AgentMessage():
     # the actual information or data being communicated. This could be a command, a query, a statement, etc.
@@ -30,3 +32,32 @@ class AgentMessage():
         self.in_reply_to = in_reply_to
         self.reply_by = reply_by
         self.language = language
+
+class AgentPlatform():
+    def __init__(self, transport: Transport):
+        self.agents = []
+        self.transport: Transport = transport
+        self.transport.register_procedure("send_message", self.send_message)
+
+    def register_agent(self, agent: Agent):
+        existing_agent = self.find_agent_by_address(agent.address)
+        if existing_agent:
+            return
+        
+        self.agents.append(agent)
+
+    def send_message(self, to: Address, sender: Address, message: AgentMessage):
+        '''
+        send_message is used for sending and receiving messages
+        '''
+        agent = self.find_agent_by_address(to)
+
+        if agent:
+            agent.receive_message(sender, message)
+        else:
+            self.transport.send_message(to, sender, "send_message", message)
+
+    def find_agent_by_address(self, address: Address):
+        for agent in self.agents:
+            if agent.address.is_equal(address):
+                return agent

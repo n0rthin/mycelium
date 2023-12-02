@@ -13,6 +13,9 @@ class Address():
         self.url = url
         self.name = name
 
+    def is_equal(self, address):
+        return self.url == address.url and self.name == address.name
+
     def to_dict(self):
         return {
             "url": self.url,
@@ -34,36 +37,35 @@ class TransportMessage(BaseModel):
 class HTTPTransport():
     def __init__(self, address: Address):
         self.address = address
+        self.procedures = {}
 
-    def set_service(self, service):
-        self.service = service
+    def register_procedure(self, procedure, callback):
+        self.procedures[procedure] = callback
+
+    def start(self, port=8000, host="127.0.0.1"):
         self.app = FastAPI()
-
+        
         @self.app.post("/")
         async def process(msg: TransportMessage):
             msg.to = Address(msg.to.url, msg.to.name)
             msg.sender = Address(msg.sender.url, msg.sender.name)
-            procedure = getattr(self.service, msg.procedure, None)
+            procedure = getattr(self.procedures, msg.procedure, None)
 
             if not callable(procedure):
                 return {"error": "Procedure not found"}
             
             return procedure(msg)
-        
-        return self.app
-        
-
-    def start(self, port=8000, host="127.0.0.1"):
+    
         def run():
             uvicorn.run(self.app, host=host, port=port, log_level="info")
 
         threading.Thread(target=run).start()
 
-    def send_message(self, to: Address, procedure: str, payload: dict):
+    def send_message(self, to: Address, sender: Address, procedure: str, payload: dict):
         print("sending message", to.url, procedure, payload)
         requests.post(to.url, json={
             "to": to.to_dict(),
-            "sender": self.address.to_dict(),
+            "sender": sender.to_dict(),
             "date": time.time(),
             "procedure": procedure,
             "payload": payload
