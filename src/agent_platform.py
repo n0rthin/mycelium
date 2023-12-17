@@ -1,38 +1,7 @@
-from typing import Optional 
 from src.transport import Transport, Address
+from src.agent_message import AgentMessage
 from src.agent import Agent
-
-class AgentMessage():
-    # the actual information or data being communicated. This could be a command, a query, a statement, etc.
-    content: str
-    # an identifier used to associate this message with a conversation or a dialogue between agents. This helps in tracking and managing multi-message exchanges.
-    conversation_id: Optional[str]
-    # this optional field specifies the interaction protocol that the message adheres to
-    protocol: Optional[str]
-    # this optional field specifies the stage in the interaction protocol that the message adheres to
-    protocol_stage: Optional[str]
-    # an identifier set by the sender, which can be used by the receiver to reply to this specific message.
-    message_id: Optional[str]
-    # this optional field specifies an agent different from the sender to whom the replies should be sent
-    reply_to: Optional[str]
-    # if the message is a reply to a previous message, this field holds the identifier of the original message.
-    in_reply_to: Optional[str]
-    # an optional field indicating a time by which a reply is expected. This is useful in time-critical applications.
-    reply_by: Optional[str]
-    # this specifies the language in which the content of the message is expressed. This is useful in multi-lingual environments.
-    language: Optional[str]
-
-    def __init__(self, content: str, conversation_id: Optional[str] = None, protocol: Optional[str] = None, protocol_stage: Optional[str] = None, reply_with: Optional[str] = None, reply_to: Optional[str] = None, in_reply_to: Optional[str] = None, reply_by: Optional[str] = None, language: Optional[str] = None):
-        self.content = content
-        self.conversation_id = conversation_id
-        self.protocol = protocol
-        self.protocol_stage = protocol_stage
-        self.reply_with = reply_with
-        self.reply_to = reply_to
-        self.in_reply_to = in_reply_to
-        self.reply_by = reply_by
-        self.language = language
-
+from src.helpers.logic import xor
 class AgentPlatform():
     def __init__(self, transport: Transport):
         self.agents = []
@@ -46,16 +15,44 @@ class AgentPlatform():
         
         self.agents.append(agent)
 
-    def send_message(self, to: Address, sender: Address, message: AgentMessage):
+    def deregister_agent(self, agentOrAddress: Agent | Address):
+        if isinstance(agentOrAddress, Address):
+            existing_agent = self.find_agent_by_address(agentOrAddress)
+        elif isinstance(agentOrAddress, Agent):
+            existing_agent = self.find_agent_by_address(agentOrAddress.address)
+        else:
+            raise ValueError(f"agentOrAddress must be either an instance of Address or Agent")
+            
+        if existing_agent:
+            self.agents.remove(existing_agent)
+
+    def send_message(self, message: AgentMessage, to: Address, sender: Address):
         '''
         send_message is used for sending and receiving messages
-        '''
-        agent = self.find_agent_by_address(to)
 
+        Raises:
+        ValueError: If message is not valid
+        '''
+        self.validate_message(message)
+
+        agent = self.find_agent_by_address(to)
         if agent:
             agent.receive_message(sender, message)
         else:
             self.transport.send_message(to, sender, "send_message", message)
+
+    def validate_message(self, message: AgentMessage):
+        """
+        Validates the given message. 
+
+        Raises:
+        ValueError: If message is not valid
+        """
+        if xor(message.protocol, message.current_protocol_node_id):
+            raise ValueError("Either both or none of 'protocol' and 'current_protocol_node_id' should be set.")
+        
+        if message.protocol and not message.conversation_id:
+            raise ValueError("If 'protocol' is set, 'conversation_id' must also be set.")
 
     def find_agent_by_address(self, address: Address):
         for agent in self.agents:

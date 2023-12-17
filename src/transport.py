@@ -34,9 +34,15 @@ class TransportMessage(BaseModel):
     procedure: str
     payload: dict
 
-class HTTPTransport():
-    def __init__(self, address: Address):
-        self.address = address
+class Transport():
+    def register_procedure(self, procedure, callback):
+        pass
+
+    def send_message(self, to: Address, sender: Address, procedure: str, payload: dict):
+        pass
+
+class HTTPTransport(Transport):
+    def __init__(self):
         self.procedures = {}
 
     def register_procedure(self, procedure, callback):
