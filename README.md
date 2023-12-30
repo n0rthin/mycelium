@@ -21,7 +21,8 @@ The protocol dictates specific guidelines for both the composition and sequencin
 - [x] Protocol prompt for agent
 - [x] Infinite loops
 - [x] Guiding prompts for agents
-- [x] Can be represented as graph
+- [ ] Versioning
+- [ ] Protocol inheritance
 - [ ] Serializable protocol definition (no extra code required to use protocol)
 
 # Plan:
