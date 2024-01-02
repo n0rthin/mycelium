@@ -1,5 +1,7 @@
 # Mycelium
 
+_[AutoGen](https://github.com/microsoft/autogen), but for hundreds or thousands of distributed agents_
+
 ![multi-agent system](./media/multi-agent-system.png)
 
 Mycelium is framework for building mult-agent systems in which agents can communicate in natural language (LLM-based agents). Its primary goal is to provide tools for direct and group collaboration among agents.
